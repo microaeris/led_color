@@ -37,8 +37,14 @@ PRIMARY_BLUE_Y = 0.08684251
 
 # Typical luminous intensity, from LED datasheet. In candela.
 RED_LUMINOUS_INTENSITY = 0.105
+RED_LUMINOUS_INTENSITY_MIN = 0.060
+RED_LUMINOUS_INTENSITY_MAX = 0.150
 GREEN_LUMINOUS_INTENSITY = 0.330
+GREEN_LUMINOUS_INTENSITY_MIN = 0.210
+GREEN_LUMINOUS_INTENSITY_MAX = 0.450
 BLUE_LUMINOUS_INTENSITY = 0.200
+BLUE_LUMINOUS_INTENSITY_MIN = 0.150
+BLUE_LUMINOUS_INTENSITY_MAX = 0.250
 
 MAX_8_BIT = 0xFF
 
@@ -159,29 +165,53 @@ def xyy_to_rgb_mixing_ratio(cie_xyy):
     # Fraction of the blue ratio required to produce the purple color
     blue_fraction = (1.0 / (ratio_br + 1.0))
 
-    return (red_fraction, ratio_pg, blue_fraction)
+    # Normalize on blue
+    red_ratio = red_fraction / blue_fraction
+    green_ratio = ratio_pg / blue_fraction
+    blue_ratio = blue_fraction / blue_fraction
+
+    return (red_ratio, green_ratio, blue_ratio)
 
 
-def print_result(rgb_percentages, rgb_intensities):
+def print_result(color_mixing_ratio, rgb_percentages, rgb_intensities):
+    # Calculate relative luminous intensities
     red_intensity_percent = (rgb_intensities[0] / RED_LUMINOUS_INTENSITY) * 100
     green_intensity_percent = (rgb_intensities[1] / GREEN_LUMINOUS_INTENSITY) \
         * 100
     blue_intensity_percent = (rgb_intensities[2] / BLUE_LUMINOUS_INTENSITY) \
         * 100
 
-    print '\tMix Ratio % \t Candela Intensity \tRelative Intensity %'
-    print 'Red: \t%d%% \t\t %.2f \t\t\t%d%%' % ((rgb_percentages[0] * 100),
-                                                round(rgb_intensities[0], 2),
-                                                red_intensity_percent)
-    print 'Green: \t%d%% \t\t %.2f \t\t\t%d%%' % ((rgb_percentages[1] * 100),
-                                                  round(rgb_intensities[1], 2),
-                                                  green_intensity_percent)
-    print 'Blue: \t%d%% \t\t %.2f \t\t\t%d%%' % ((rgb_percentages[2] * 100),
-                                                 round(rgb_intensities[2], 2),
-                                                 blue_intensity_percent)
+    print '\t\t\tRed \t\tGreen \t\tBlue'
+    print 'Mix Ratio: \t\t%.3f \t\t%.3f \t\t%.3f' % (color_mixing_ratio[0],
+                                                     color_mixing_ratio[1],
+                                                     color_mixing_ratio[2])
+    print 'Mix Ratio %%: \t\t%d%% \t\t%d%% \t\t%d%%' % (
+        rgb_percentages[0] * 100,
+        rgb_percentages[1] * 100,
+        rgb_percentages[2] * 100
+    )
+    print 'Intensity (cd): \t%.2f \t\t%.2f \t\t%.2f' % (
+        round(rgb_intensities[0], 2),
+        round(rgb_intensities[1], 2),
+        round(rgb_intensities[2], 2)
+    )
+    print 'Relative Intensity %%: \t%d%% \t\t%d%% \t\t%d%%' % (
+        red_intensity_percent,
+        green_intensity_percent,
+        blue_intensity_percent
+    )
 
     # Now map the Relative Intensity % to the the `Relative Intensity vs.
     # Current` graph in the datasheet.
+
+
+def test_results(rgb_intensities):
+    assert rgb_intensities[0] <= RED_LUMINOUS_INTENSITY_MAX
+    assert rgb_intensities[0] >= RED_LUMINOUS_INTENSITY_MIN
+    assert rgb_intensities[1] <= GREEN_LUMINOUS_INTENSITY_MAX
+    assert rgb_intensities[1] >= GREEN_LUMINOUS_INTENSITY_MIN
+    assert rgb_intensities[2] <= BLUE_LUMINOUS_INTENSITY_MAX
+    assert rgb_intensities[2] >= BLUE_LUMINOUS_INTENSITY_MIN
 
 
 def choose_luminous_intensities(color_mixing_ratio):
@@ -194,21 +224,15 @@ def choose_luminous_intensities(color_mixing_ratio):
     green_percentage = (color_mixing_ratio[1] / sum(color_mixing_ratio))
     blue_percentage = (color_mixing_ratio[2] / sum(color_mixing_ratio))
 
-    # Min of the LED's RGB luminous intensity will constrain the final luminous
-    # intensities to create the target color, assuming the luminous intensity
-    # of is generally going to be much lesser than green and blue.
-    assert RED_LUMINOUS_INTENSITY < GREEN_LUMINOUS_INTENSITY, 'Nooooooo'
-    assert RED_LUMINOUS_INTENSITY < BLUE_LUMINOUS_INTENSITY, 'Rude'
-
-    r_intensity = RED_LUMINOUS_INTENSITY
-    g_intensity = (RED_LUMINOUS_INTENSITY / red_percentage) * green_percentage
-    assert g_intensity <= GREEN_LUMINOUS_INTENSITY
-    b_intensity = (RED_LUMINOUS_INTENSITY / red_percentage) * blue_percentage
-    assert b_intensity <= BLUE_LUMINOUS_INTENSITY
+    green_intensity = GREEN_LUMINOUS_INTENSITY_MIN
+    red_intensity = (green_intensity / green_percentage) * red_percentage
+    blue_intensity = (green_intensity / green_percentage) * blue_percentage
 
     rgb_percentages = (red_percentage, green_percentage, blue_percentage)
-    rgb_intensities = (r_intensity, g_intensity, b_intensity)
-    print_result(rgb_percentages, rgb_intensities)
+    rgb_intensities = (red_intensity, green_intensity, blue_intensity)
+
+    print_result(color_mixing_ratio, rgb_percentages, rgb_intensities)
+    test_results(rgb_intensities)
 
 
 def main():
@@ -228,8 +252,8 @@ def main():
     color_mixing_ratio = xyy_to_rgb_mixing_ratio(cie_xyy)
 
     if any(map(lambda x: x < 0, color_mixing_ratio)):
-        # Target color can't be created through additive mixing of the primary
-        # colors.
+        # Your target color can't be created through additive mixing of the
+        # primary colors.
         raise Exception('You\'ve chosen an imaginary color given your \
 primaries!')
 
