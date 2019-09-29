@@ -136,6 +136,7 @@ def xyy_to_rgb_mixing_ratio(cie_xyy):
     '''Calculate RGB color mixing values using the center of gravity method
 
     :param cie_xyy: xyY color coordinate to describe the target color.
+                    (x, y, Y).
     '''
     # Line between red and blue in the 2D CIE 1931 xyY color space
     slope_rb = (PRIMARY_RED_Y - PRIMARY_BLUE_Y) / \
@@ -206,12 +207,17 @@ def print_result(color_mixing_ratio, rgb_percentages, rgb_intensities):
 
 
 def test_results(rgb_intensities):
-    assert rgb_intensities[0] <= RED_LUMINOUS_INTENSITY_MAX
-    assert rgb_intensities[0] >= RED_LUMINOUS_INTENSITY_MIN
-    assert rgb_intensities[1] <= GREEN_LUMINOUS_INTENSITY_MAX
-    assert rgb_intensities[1] >= GREEN_LUMINOUS_INTENSITY_MIN
-    assert rgb_intensities[2] <= BLUE_LUMINOUS_INTENSITY_MAX
-    assert rgb_intensities[2] >= BLUE_LUMINOUS_INTENSITY_MIN
+    if rgb_intensities[0] != 0:
+        assert rgb_intensities[0] <= RED_LUMINOUS_INTENSITY_MAX
+        assert rgb_intensities[0] >= RED_LUMINOUS_INTENSITY_MIN
+
+    if rgb_intensities[1] != 0:
+        assert rgb_intensities[1] <= GREEN_LUMINOUS_INTENSITY_MAX
+        assert rgb_intensities[1] >= GREEN_LUMINOUS_INTENSITY_MIN
+
+    if rgb_intensities[2] != 0:
+        assert rgb_intensities[2] <= BLUE_LUMINOUS_INTENSITY_MAX
+        assert rgb_intensities[2] >= BLUE_LUMINOUS_INTENSITY_MIN
 
 
 def choose_luminous_intensities(color_mixing_ratio):
@@ -224,12 +230,20 @@ def choose_luminous_intensities(color_mixing_ratio):
     green_percentage = (color_mixing_ratio[1] / sum(color_mixing_ratio))
     blue_percentage = (color_mixing_ratio[2] / sum(color_mixing_ratio))
 
-    green_intensity = GREEN_LUMINOUS_INTENSITY_MIN
-    red_intensity = (green_intensity / green_percentage) * red_percentage
-    blue_intensity = (green_intensity / green_percentage) * blue_percentage
+    if round(green_percentage, 2) == 0:
+        # Use red as bounding value
+        red_intensity = RED_LUMINOUS_INTENSITY_MAX
+        green_intensity = 0
+        blue_intensity = (red_intensity / red_percentage) * blue_percentage
+    else:
+        # Use green as bounding value
+        green_intensity = GREEN_LUMINOUS_INTENSITY_MIN
+        red_intensity = (green_intensity / green_percentage) * red_percentage
+        blue_intensity = (green_intensity / green_percentage) * blue_percentage
 
     rgb_percentages = (red_percentage, green_percentage, blue_percentage)
     rgb_intensities = (red_intensity, green_intensity, blue_intensity)
+    rgb_intensities = [round(color, 2) for color in rgb_intensities]
 
     print_result(color_mixing_ratio, rgb_percentages, rgb_intensities)
     test_results(rgb_intensities)
@@ -254,6 +268,7 @@ def main():
     if any(map(lambda x: x < 0, color_mixing_ratio)):
         # Your target color can't be created through additive mixing of the
         # primary colors.
+        print('Ratio: %f %f %f' % color_mixing_ratio)
         raise Exception('You\'ve chosen an imaginary color given your \
 primaries!')
 

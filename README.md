@@ -10,11 +10,12 @@ Given your 8-bit hex RGB color, the script will tell you what candela you need y
 ### Example
 
 ```
-$ python ./led_color.py --rgb-color E0A3B5
-        Mix Ratio %      Candela Intensity  Relative Intensity %
-Red:    38%          0.10           100%
-Green:  49%          0.13           40%
-Blue:   11%          0.03           15%
+✦ python ./led_color.py --rgb-color d40030
+                        Red         Green       Blue
+Mix Ratio:              26.633      5.571       1.000
+Mix Ratio %:            80%         16%         3%
+Intensity (cd):         1.00        0.21        0.04
+Relative Intensity %:   956%        63%         18%
 
 ```
 
