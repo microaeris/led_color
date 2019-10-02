@@ -217,7 +217,6 @@ def choose_luminous_intensities(color_mixing_ratio):
 
     rgb_percentages = (red_percentage, green_percentage, blue_percentage)
     rgb_intensities = (red_intensity, green_intensity, blue_intensity)
-    rgb_intensities = [round(color, 2) for color in rgb_intensities]
 
     print_result(color_mixing_ratio, rgb_percentages, rgb_intensities)
 
